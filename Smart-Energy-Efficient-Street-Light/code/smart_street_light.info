@@ -3,14 +3,15 @@ Project: Smart Energy-Efficient Street Lighting System
 Description:
 Adaptive street lighting using LDR (day/night detection),
 PIR (motion detection), and Ultrasonic sensor (active presence detection).
+Ensures light remains ON even when a vehicle is stationary.
 Simulated using Tinkercad.
 
-Author:
+Author: 
 Srijita Patra
 Soham Dey
 Abhradeep Adhikari
-
 */
+
 #include <LiquidCrystal.h>
 
 /* ================= LCD CONNECTION =================
@@ -36,9 +37,9 @@ const int statusLED  = 10;
 const int trigPin = 8;
 const int echoPin = 13;
 
-/* Presence hold logic */
+// Presence hold logic
 unsigned long lastPresenceTime = 0;
-const unsigned long holdTime = 5000; // 5 seconds
+const unsigned long holdTime = 3000; // 3 seconds
 
 void setup() {
   pinMode(pirPin, INPUT);
@@ -51,10 +52,12 @@ void setup() {
 
   lcd.begin(16, 2);
   lcd.clear();
+
   lcd.setCursor(0, 0);
   lcd.print("Smart Street");
   lcd.setCursor(0, 1);
   lcd.print("Light System");
+
   delay(2000);
   lcd.clear();
 }
@@ -68,7 +71,7 @@ void loop() {
 
   /* -------- ULTRASONIC DISTANCE -------- */
   long duration;
-  int distance;
+  int distance = 400;   // Default: no vehicle
 
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -76,23 +79,29 @@ void loop() {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  duration = pulseIn(echoPin, HIGH, 30000); // up to ~400 cm
+  // Timeout corresponds to ~400 cm
+  duration = pulseIn(echoPin, HIGH, 30000);
 
   if (duration > 0) {
     distance = duration * 0.034 / 2;
-    if (distance <= 400) {
-      lastPresenceTime = millis();   // object detected
+    if (distance > 400) {
+      distance = 400;
     }
+  }
+
+  // VALID vehicle detection window
+  if (distance >= 15 && distance <= 120) {
+    lastPresenceTime = millis();
   }
 
   bool objectPresent = (millis() - lastPresenceTime < holdTime);
 
-  /* -------- DAY / NIGHT DECISION --------
+  /* -------- DAY / NIGHT LOGIC --------
      LDR wiring:
      5V -- LDR -- A0 -- 10k -- GND
      Bright -> HIGH value
      Dark   -> LOW value
-  -------------------------------------- */
+  ------------------------------------ */
 
   if (ldrValue > potValue) {
     /* ============ DAY MODE ============ */
@@ -111,7 +120,7 @@ void loop() {
     lcd.print("NIGHT MODE     ");
 
     if (motion == HIGH || objectPresent) {
-      // Vehicle/person present (moving or standing)
+      // Vehicle present
       analogWrite(ledPin, 255);
       digitalWrite(statusLED, HIGH);
       digitalWrite(buzzerPin, HIGH);
@@ -120,13 +129,13 @@ void loop() {
       lcd.print("Vehicle Present");
     }
     else {
-      // No vehicle/person
-      analogWrite(ledPin, 80);   // DIM mode
+      // No vehicle
+      analogWrite(ledPin, 80);
       digitalWrite(statusLED, LOW);
       digitalWrite(buzzerPin, LOW);
 
       lcd.setCursor(0, 1);
-      lcd.print("No Vehicle     ");
+      lcd.print("No Vehicle 400 ");
     }
   }
 
