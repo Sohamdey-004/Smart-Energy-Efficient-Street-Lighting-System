@@ -1,0 +1,137 @@
+/*
+Project: Smart Energy-Efficient Street Lighting System
+Description:
+Adaptive street lighting using LDR (day/night detection),
+PIR (motion detection), and Ultrasonic sensor (active presence detection).
+Simulated using Tinkercad.
+
+Author:
+Srijita Patra
+Soham Dey
+Abhradeep Adhikari
+
+## Simulation Link
+Tinkercad Circuit: https://www.tinkercad.com/things/2eO3euURjBN-smart-energy-efficient-street-light-system/editel?returnTo=https%3A%2F%2Fwww.tinkercad.com%2Fdashboard&sharecode=Ok4-zCuCOIJwILoKQWEh4HXYvnLiUHRj7HVaoevASDo
+
+*/
+#include <LiquidCrystal.h>
+
+/* ================= LCD CONNECTION =================
+RS  -> D12
+E   -> D11
+D4  -> D5
+D5  -> D4
+D6  -> D3
+D7  -> D6
+=================================================== */
+LiquidCrystal lcd(12, 11, 5, 4, 3, 6);
+
+/* ================= PIN DEFINITIONS ================= */
+const int ldrPin     = A0;
+const int potPin     = A1;
+const int pirPin     = 2;
+
+const int ledPin     = 9;     // Street light (PWM)
+const int buzzerPin  = 7;
+const int statusLED  = 10;
+
+// Ultrasonic sensor
+const int trigPin = 8;
+const int echoPin = 13;
+
+/* Presence hold logic */
+unsigned long lastPresenceTime = 0;
+const unsigned long holdTime = 5000; // 5 seconds
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(statusLED, OUTPUT);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  lcd.begin(16, 2);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Smart Street");
+  lcd.setCursor(0, 1);
+  lcd.print("Light System");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+
+  /* -------- SENSOR READINGS -------- */
+  int ldrValue = analogRead(ldrPin);
+  int potValue = analogRead(potPin);
+  int motion   = digitalRead(pirPin);
+
+  /* -------- ULTRASONIC DISTANCE -------- */
+  long duration;
+  int distance;
+
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH, 30000); // up to ~400 cm
+
+  if (duration > 0) {
+    distance = duration * 0.034 / 2;
+    if (distance <= 400) {
+      lastPresenceTime = millis();   // object detected
+    }
+  }
+
+  bool objectPresent = (millis() - lastPresenceTime < holdTime);
+
+  /* -------- DAY / NIGHT DECISION --------
+     LDR wiring:
+     5V -- LDR -- A0 -- 10k -- GND
+     Bright -> HIGH value
+     Dark   -> LOW value
+  -------------------------------------- */
+
+  if (ldrValue > potValue) {
+    /* ============ DAY MODE ============ */
+    analogWrite(ledPin, 0);
+    digitalWrite(statusLED, LOW);
+    digitalWrite(buzzerPin, LOW);
+
+    lcd.setCursor(0, 0);
+    lcd.print("DAY MODE       ");
+    lcd.setCursor(0, 1);
+    lcd.print("Light OFF      ");
+  }
+  else {
+    /* ============ NIGHT MODE ============ */
+    lcd.setCursor(0, 0);
+    lcd.print("NIGHT MODE     ");
+
+    if (motion == HIGH || objectPresent) {
+      // Vehicle/person present (moving or standing)
+      analogWrite(ledPin, 255);
+      digitalWrite(statusLED, HIGH);
+      digitalWrite(buzzerPin, HIGH);
+
+      lcd.setCursor(0, 1);
+      lcd.print("Vehicle Present");
+    }
+    else {
+      // No vehicle/person
+      analogWrite(ledPin, 80);   // DIM mode
+      digitalWrite(statusLED, LOW);
+      digitalWrite(buzzerPin, LOW);
+
+      lcd.setCursor(0, 1);
+      lcd.print("No Vehicle     ");
+    }
+  }
+
+  delay(300);
+}
