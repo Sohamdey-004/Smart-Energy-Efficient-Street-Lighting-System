@@ -39,3 +39,7 @@ See `circuit/block_diagram.png`
 Srijita Patra
 Soham Dey
 Abhradeep Adhikari
+
+## Simulation Link
+Tinkercad Circuit: https://www.tinkercad.com/things/2eO3euURjBN-smart-energy-efficient-street-light-system/editel?returnTo=https%3A%2F%2Fwww.tinkercad.com%2Fdashboard&sharecode=Ok4-zCuCOIJwILoKQWEh4HXYvnLiUHRj7HVaoevASDo
+
